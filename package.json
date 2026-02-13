@@ -20,7 +20,3 @@
       "version": "8.5.2",
       "resolved": "https://registry.npmjs.org/@pixi/accessibility/-/accessibility-8.5.2.tgz"
     },
-    // ... (não precisa colar tudo, mas pra funcionar, use uma versão mínima ou gere local)
-    // Nota: pra evitar erro, use uma versão simples gerada
-  }
-}
