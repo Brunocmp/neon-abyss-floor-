@@ -1,11 +1,116 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Neon Abyss Floor</title>
-  </head>
-  <body>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Abyss Floor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+  </style>
+</head>
+<body>
+ <script>
+  console.log('Bruno - Mapa Neon + Chuva v1');
+
+  const app = new PIXI.Application({
+    width: window.innerWidth,
+    height: window.innerHeight,
+    backgroundColor: 0x0a001f,
+    resizeTo: window,
+    antialias: true,
+  });
+
+  document.body.appendChild(app.view);
+
+  const mapContainer = new PIXI.Container();
+  app.stage.addChild(mapContainer);
+
+  // Função isométrica
+  function cartToIso(x, y) {
+    return {
+      x: (x - y) * 32,
+      y: (x + y) * 16,
+    };
+  }
+
+  // Prédio neon
+  function createNeonBuilding(x, y) {
+    const pos = cartToIso(x, y);
+    const building = new PIXI.Graphics();
+    building.beginFill(0x1a0033);
+    building.drawRect(-32, -96, 64, 128);
+    building.endFill();
+
+    const neon = new PIXI.Graphics();
+    neon.lineStyle(4, 0x00ffff, 0.8);
+    neon.drawRect(-30, -94, 60, 124);
+    building.addChild(neon);
+
+    // Piscar
+    const startTime = Date.now();
+    app.ticker.add(() => {
+      neon.alpha = 0.8 + Math.sin((Date.now() - startTime) * 0.005) * 0.2;
+    });
+
+    building.position.set(pos.x + app.screen.width / 2, pos.y + app.screen.height / 2 - 200);
+    mapContainer.addChild(building);
+  }
+
+  // Grid de prédios
+  for (let ix = -10; ix <= 10; ix++) {
+    for (let iy = -10; iy <= 10; iy++) {
+      if (Math.abs(ix) + Math.abs(iy) < 12) {
+        createNeonBuilding(ix, iy);
+      }
+    }
+  }
+
+  // CHUVA DE PARTÍCULAS NEON (efeito Blade Runner)
+  const particleCount = 300;
+  const particles = new PIXI.ParticleContainer(particleCount, {
+    position: true,
+    scale: true,
+    alpha: true,
+    tint: true,
+  });
+  app.stage.addChild(particles);
+
+  const particleGraphics = new PIXI.Graphics();
+  particleGraphics.beginFill(0x00ffff);
+  particleGraphics.drawCircle(0, 0, 2);
+  particleGraphics.endFill();
+
+  const particleTexture = app.renderer.generateTexture(particleGraphics);
+
+  const particleData = [];
+
+  for (let i = 0; i < particleCount; i++) {
+    const sprite = new PIXI.Sprite(particleTexture);
+    sprite.x = Math.random() * app.screen.width;
+    sprite.y = Math.random() * app.screen.height - 100; // começa acima da tela
+    sprite.scale.set(Math.random() * 0.8 + 0.2);
+    sprite.alpha = Math.random() * 0.6 + 0.4;
+    sprite.tint = 0x00ffff + Math.floor(Math.random() * 0x001111); // variações teal
+    sprite.speed = Math.random() * 2 + 1; // velocidade da chuva
+    particles.addChild(sprite);
+
+    particleData.push(sprite);
+  }
+
+  // Animação da chuva
+  app.ticker.add((delta) => {
+    particleData.forEach(sprite => {
+      sprite.y += sprite.speed * delta;
+
+      if (sprite.y > app.screen.height + 50) {
+        sprite.y = -50; // reinicia acima da tela
+        sprite.x = Math.random() * app.screen.width;
+      }
+    });
+  });
+
+  console.log('Mapa Neon + Chuva carregado!');
+ </script>
+</body>
 </html>
