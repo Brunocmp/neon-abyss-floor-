@@ -1,116 +1,237 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Neon Abyss Floor</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js"></script>
-  <style>
-    body { margin: 0; overflow: hidden; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Neon Abyss</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.3/pixi.min.js"></script>
+<style>
+body {
+  margin:0;
+  overflow:hidden;
+  background:#000;
+}
+canvas {
+  display:block;
+}
+</style>
 </head>
 <body>
- <script>
-  console.log('Bruno - Mapa Neon + Chuva v1');
+<script>
 
-  const app = new PIXI.Application({
-    width: window.innerWidth,
-    height: window.innerHeight,
-    backgroundColor: 0x0a001f,
-    resizeTo: window,
-    antialias: true,
-  });
+// =====================================================
+// APP
+// =====================================================
+const app = new PIXI.Application({
+  resizeTo: window,
+  backgroundAlpha: 0,
+  antialias: true
+});
+document.body.appendChild(app.view);
 
-  document.body.appendChild(app.view);
+// =====================================================
+// FUNDO ESTILIZADO
+// =====================================================
+const bg = new PIXI.Graphics();
+bg.beginFill(0x070021);
+bg.drawRect(0,0,app.screen.width,app.screen.height);
+bg.endFill();
+app.stage.addChild(bg);
 
-  const mapContainer = new PIXI.Container();
-  app.stage.addChild(mapContainer);
+// estrelas
+for(let i=0;i<150;i++){
+  const star = new PIXI.Graphics();
+  star.beginFill(0x1a1a55);
+  star.drawCircle(0,0,1.5);
+  star.endFill();
+  star.x = Math.random()*app.screen.width;
+  star.y = Math.random()*app.screen.height;
+  bg.addChild(star);
+}
 
-  // Função isométrica
-  function cartToIso(x, y) {
-    return {
-      x: (x - y) * 32,
-      y: (x + y) * 16,
-    };
-  }
+// =====================================================
+// CAMERA + LAYERS
+// =====================================================
+const camera = new PIXI.Container();
+app.stage.addChild(camera);
 
-  // Prédio neon
-  function createNeonBuilding(x, y) {
-    const pos = cartToIso(x, y);
-    const building = new PIXI.Graphics();
-    building.beginFill(0x1a0033);
-    building.drawRect(-32, -96, 64, 128);
-    building.endFill();
+const groundLayer = new PIXI.Container();
+const buildingLayer = new PIXI.Container();
+const rainLayer = new PIXI.Container();
 
-    const neon = new PIXI.Graphics();
-    neon.lineStyle(4, 0x00ffff, 0.8);
-    neon.drawRect(-30, -94, 60, 124);
-    building.addChild(neon);
+buildingLayer.sortableChildren = true;
 
-    // Piscar
-    const startTime = Date.now();
-    app.ticker.add(() => {
-      neon.alpha = 0.8 + Math.sin((Date.now() - startTime) * 0.005) * 0.2;
-    });
+camera.addChild(groundLayer);
+camera.addChild(buildingLayer);
+camera.addChild(rainLayer);
 
-    building.position.set(pos.x + app.screen.width / 2, pos.y + app.screen.height / 2 - 200);
-    mapContainer.addChild(building);
-  }
+// =====================================================
+// ISO FUNCTION
+// =====================================================
+function cartToIso(x,y){
+  return {
+    x:(x-y)*32,
+    y:(x+y)*16
+  };
+}
 
-  // Grid de prédios
-  for (let ix = -10; ix <= 10; ix++) {
-    for (let iy = -10; iy <= 10; iy++) {
-      if (Math.abs(ix) + Math.abs(iy) < 12) {
-        createNeonBuilding(ix, iy);
+// =====================================================
+// MAP + BUILDINGS
+// =====================================================
+const MAP_RADIUS = 6;
+const buildings = [];
+
+for(let x=-MAP_RADIUS;x<=MAP_RADIUS;x++){
+  for(let y=-MAP_RADIUS;y<=MAP_RADIUS;y++){
+
+    if(Math.abs(x)+Math.abs(y)<MAP_RADIUS+2){
+
+      const pos = cartToIso(x,y);
+
+      // chão
+      const tile = new PIXI.Graphics();
+      tile.beginFill(0x0d0022);
+      tile.drawPolygon([
+        0,0,
+        32,16,
+        0,32,
+        -32,16
+      ]);
+      tile.endFill();
+
+      tile.position.set(
+        pos.x + app.screen.width/2,
+        pos.y + 200
+      );
+
+      groundLayer.addChild(tile);
+
+      // prédio aleatório
+      if(Math.random() > 0.6){
+
+        const building = new PIXI.Container();
+
+        const body = new PIXI.Graphics();
+        body.beginFill(0x160033);
+        body.drawRect(-20,-80,40,80);
+        body.endFill();
+
+        const outline = new PIXI.Graphics();
+        outline.lineStyle(2,0x00ffff,0.8);
+        outline.drawRect(-20,-80,40,80);
+
+        building.addChild(body);
+        building.addChild(outline);
+
+        building.position.set(tile.x, tile.y);
+
+        buildingLayer.addChild(building);
+        buildings.push(building);
+
+        // glow animado
+        app.ticker.add(()=>{
+          outline.alpha = 0.6 + Math.sin(Date.now()*0.004)*0.4;
+        });
       }
     }
   }
+}
 
-  // CHUVA DE PARTÍCULAS NEON (efeito Blade Runner)
-  const particleCount = 300;
-  const particles = new PIXI.ParticleContainer(particleCount, {
-    position: true,
-    scale: true,
-    alpha: true,
-    tint: true,
-  });
-  app.stage.addChild(particles);
+// =====================================================
+// PLAYER (USA /assets/ship.png)
+// =====================================================
+const shipTexture = PIXI.Texture.from("./assets/ship.png");
 
-  const particleGraphics = new PIXI.Graphics();
-  particleGraphics.beginFill(0x00ffff);
-  particleGraphics.drawCircle(0, 0, 2);
-  particleGraphics.endFill();
+const player = new PIXI.Sprite(shipTexture);
+player.anchor.set(0.5);
+player.scale.set(0.25); // nave menor
+player.blendMode = PIXI.BLEND_MODES.ADD;
+player.position.set(app.screen.width/2, 300);
 
-  const particleTexture = app.renderer.generateTexture(particleGraphics);
+buildingLayer.addChild(player);
 
-  const particleData = [];
+// =====================================================
+// INPUT
+// =====================================================
+const keys = {};
+window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
-  for (let i = 0; i < particleCount; i++) {
-    const sprite = new PIXI.Sprite(particleTexture);
-    sprite.x = Math.random() * app.screen.width;
-    sprite.y = Math.random() * app.screen.height - 100; // começa acima da tela
-    sprite.scale.set(Math.random() * 0.8 + 0.2);
-    sprite.alpha = Math.random() * 0.6 + 0.4;
-    sprite.tint = 0x00ffff + Math.floor(Math.random() * 0x001111); // variações teal
-    sprite.speed = Math.random() * 2 + 1; // velocidade da chuva
-    particles.addChild(sprite);
+// =====================================================
+// COLLISION SIMPLES
+// =====================================================
+function checkCollision(nx, ny){
+  for(const b of buildings){
+    const dx = nx - b.x;
+    const dy = ny - (b.y-40);
+    if(Math.abs(dx) < 25 && Math.abs(dy) < 40){
+      return true;
+    }
+  }
+  return false;
+}
 
-    particleData.push(sprite);
+// =====================================================
+// RAIN
+// =====================================================
+const rainDrops = [];
+
+for(let i=0;i<250;i++){
+  const drop = new PIXI.Graphics();
+  drop.beginFill(0x00ffff);
+  drop.drawRect(0,0,2,10);
+  drop.endFill();
+
+  drop.x = Math.random()*app.screen.width;
+  drop.y = Math.random()*app.screen.height;
+  drop.speed = Math.random()*4+2;
+
+  rainLayer.addChild(drop);
+  rainDrops.push(drop);
+}
+
+// =====================================================
+// GAME LOOP
+// =====================================================
+app.ticker.add(delta=>{
+
+  // movimento
+  let nx = player.x;
+  let ny = player.y;
+
+  if(keys["arrowup"]) ny -= 4;
+  if(keys["arrowdown"]) ny += 4;
+  if(keys["arrowleft"]) nx -= 4;
+  if(keys["arrowright"]) nx += 4;
+
+  if(!checkCollision(nx,ny)){
+    player.x = nx;
+    player.y = ny;
   }
 
-  // Animação da chuva
-  app.ticker.add((delta) => {
-    particleData.forEach(sprite => {
-      sprite.y += sprite.speed * delta;
+  // depth real
+  buildingLayer.children.sort((a,b)=>a.y-b.y);
 
-      if (sprite.y > app.screen.height + 50) {
-        sprite.y = -50; // reinicia acima da tela
-        sprite.x = Math.random() * app.screen.width;
-      }
-    });
+  // chuva
+  rainDrops.forEach(d=>{
+    d.y += d.speed*delta;
+    if(d.y > app.screen.height){
+      d.y = -20;
+      d.x = Math.random()*app.screen.width;
+    }
   });
 
-  console.log('Mapa Neon + Chuva carregado!');
- </script>
+  // câmera suave
+  const targetX = -player.x + app.screen.width/2;
+  const targetY = -player.y + app.screen.height/2;
+
+  camera.x += (targetX - camera.x) * 0.07;
+  camera.y += (targetY - camera.y) * 0.07;
+
+});
+
+console.log("Neon Abyss Git Ready rodando.");
+
+</script>
 </body>
 </html>
