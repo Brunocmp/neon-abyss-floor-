@@ -2,67 +2,49 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Space Station Scene</title>
+<title>Space Station</title>
 <style>
-    body {
-        margin: 0;
-        overflow: hidden;
-        background: #050816;
-        font-family: Arial, sans-serif;
-    }
-
-    #hint {
-        position: absolute;
-        bottom: 20px;
-        width: 100%;
-        text-align: center;
-        color: #00eaff;
-        font-size: 14px;
-        opacity: 0.8;
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0% { opacity: 0.4; }
-        50% { opacity: 1; }
-        100% { opacity: 0.4; }
-    }
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #050816;
+}
+#hint {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+    color: #00eaff;
+    font-size: 14px;
+}
 </style>
 </head>
 <body>
 
-<div id="hint">🚀 Arraste na tela para mover a nave</div>
+<div id="hint">🚀 Arraste a nave</div>
 
-<script src="https://pixijs.download/release/pixi.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
 <script>
+
 const app = new PIXI.Application({
     resizeTo: window,
     backgroundColor: 0x050816
 });
 document.body.appendChild(app.view);
 
-let ship;
-let rainDrops = [];
+PIXI.Loader.shared
+.add("ship", "assets/ship.png")
+.add("station", "assets/station_bg.png")
+.load(setup);
 
-// 🔹 Carregando imagens
-PIXI.Assets.load([
-    "assets/ship.png",
-    "assets/station_bg.png"
-]).then(setup);
+function setup(loader, resources) {
 
-function setup() {
-
-    // ================================
-    // 🌌 ESTAÇÃO (fundo real)
-    // ================================
-    const station = PIXI.Sprite.from("assets/station_bg.png");
-
+    // 🌌 ESTAÇÃO
+    const station = new PIXI.Sprite(resources.station.texture);
     station.anchor.set(0.5);
     station.x = app.screen.width / 2;
     station.y = app.screen.height / 2;
-    station.alpha = 0.9;
 
-    // escala proporcional
     const scale = Math.max(
         app.screen.width / station.texture.width,
         app.screen.height / station.texture.height
@@ -71,80 +53,57 @@ function setup() {
 
     app.stage.addChild(station);
 
-    // ================================
     // 🚀 NAVE
-    // ================================
-    ship = PIXI.Sprite.from("assets/ship.png");
+    const ship = new PIXI.Sprite(resources.ship.texture);
     ship.anchor.set(0.5);
     ship.x = app.screen.width * 0.7;
     ship.y = app.screen.height * 0.5;
     ship.scale.set(0.6);
-
-    ship.eventMode = "static";
-    ship.cursor = "pointer";
+    ship.interactive = true;
+    ship.buttonMode = true;
 
     app.stage.addChild(ship);
 
-    enableShipControls();
-
-    // ================================
-    // 🌧️ CHUVA FUTURISTA
-    // ================================
-    createRain();
-
-    app.ticker.add(gameLoop);
-}
-
-// ===================================
-// 🎮 CONTROLES (mobile + desktop)
-// ===================================
-function enableShipControls() {
+    // 🎮 CONTROLE
     let dragging = false;
 
-    ship.on("pointerdown", () => dragging = true);
-    ship.on("pointerup", () => dragging = false);
-    ship.on("pointerupoutside", () => dragging = false);
-
-    ship.on("pointermove", (event) => {
+    ship
+    .on("pointerdown", () => dragging = true)
+    .on("pointerup", () => dragging = false)
+    .on("pointerupoutside", () => dragging = false)
+    .on("pointermove", (event) => {
         if (dragging) {
-            const pos = event.global;
+            const pos = event.data.global;
             ship.x += (pos.x - ship.x) * 0.1;
             ship.y += (pos.y - ship.y) * 0.1;
         }
     });
-}
 
-// ===================================
-// 🌧️ CHUVA
-// ===================================
-function createRain() {
+    // 🌧️ CHUVA
+    const rain = [];
     for (let i = 0; i < 200; i++) {
         const drop = new PIXI.Graphics();
         drop.beginFill(0x00eaff);
         drop.drawRect(0, 0, 2, 10);
         drop.endFill();
-
         drop.x = Math.random() * app.screen.width;
         drop.y = Math.random() * app.screen.height;
         drop.speed = 5 + Math.random() * 5;
-
-        rainDrops.push(drop);
+        rain.push(drop);
         app.stage.addChild(drop);
     }
-}
 
-function gameLoop() {
-
-    // chuva animando
-    rainDrops.forEach(drop => {
-        drop.y += drop.speed;
-
-        if (drop.y > app.screen.height) {
-            drop.y = -10;
-            drop.x = Math.random() * app.screen.width;
-        }
+    app.ticker.add(() => {
+        rain.forEach(drop => {
+            drop.y += drop.speed;
+            if (drop.y > app.screen.height) {
+                drop.y = -10;
+                drop.x = Math.random() * app.screen.width;
+            }
+        });
     });
 }
+
 </script>
 </body>
 </html>
