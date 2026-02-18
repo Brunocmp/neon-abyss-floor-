@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>Neon Abyss</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.3/pixi.min.js"></script>
 <style>
@@ -10,6 +10,7 @@ body {
   margin:0;
   overflow:hidden;
   background:#000;
+  touch-action:none;
 }
 canvas {
   display:block;
@@ -30,7 +31,7 @@ const app = new PIXI.Application({
 document.body.appendChild(app.view);
 
 // =====================================================
-// FUNDO ESTILIZADO
+// FUNDO
 // =====================================================
 const bg = new PIXI.Graphics();
 bg.beginFill(0x070021);
@@ -66,7 +67,7 @@ camera.addChild(buildingLayer);
 camera.addChild(rainLayer);
 
 // =====================================================
-// ISO FUNCTION
+// ISO
 // =====================================================
 function cartToIso(x,y){
   return {
@@ -76,7 +77,7 @@ function cartToIso(x,y){
 }
 
 // =====================================================
-// MAP + BUILDINGS
+// MAPA
 // =====================================================
 const MAP_RADIUS = 6;
 const buildings = [];
@@ -88,7 +89,6 @@ for(let x=-MAP_RADIUS;x<=MAP_RADIUS;x++){
 
       const pos = cartToIso(x,y);
 
-      // chão
       const tile = new PIXI.Graphics();
       tile.beginFill(0x0d0022);
       tile.drawPolygon([
@@ -106,7 +106,6 @@ for(let x=-MAP_RADIUS;x<=MAP_RADIUS;x++){
 
       groundLayer.addChild(tile);
 
-      // prédio aleatório
       if(Math.random() > 0.6){
 
         const building = new PIXI.Container();
@@ -122,13 +121,11 @@ for(let x=-MAP_RADIUS;x<=MAP_RADIUS;x++){
 
         building.addChild(body);
         building.addChild(outline);
-
         building.position.set(tile.x, tile.y);
 
         buildingLayer.addChild(building);
         buildings.push(building);
 
-        // glow animado
         app.ticker.add(()=>{
           outline.alpha = 0.6 + Math.sin(Date.now()*0.004)*0.4;
         });
@@ -138,27 +135,51 @@ for(let x=-MAP_RADIUS;x<=MAP_RADIUS;x++){
 }
 
 // =====================================================
-// PLAYER (USA /assets/ship.png)
+// PLAYER
 // =====================================================
 const shipTexture = PIXI.Texture.from("./assets/ship.png");
 
 const player = new PIXI.Sprite(shipTexture);
 player.anchor.set(0.5);
-player.scale.set(0.25); // nave menor
+player.scale.set(0.25);
 player.blendMode = PIXI.BLEND_MODES.ADD;
 player.position.set(app.screen.width/2, 300);
 
 buildingLayer.addChild(player);
 
 // =====================================================
-// INPUT
+// INPUT TECLADO
 // =====================================================
 const keys = {};
 window.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
 window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
 // =====================================================
-// COLLISION SIMPLES
+// INPUT TOUCH (MOBILE)
+// =====================================================
+let touchActive = false;
+let touchX = 0;
+let touchY = 0;
+
+app.view.addEventListener("touchstart", (e) => {
+  touchActive = true;
+  const touch = e.touches[0];
+  touchX = touch.clientX;
+  touchY = touch.clientY;
+});
+
+app.view.addEventListener("touchmove", (e) => {
+  const touch = e.touches[0];
+  touchX = touch.clientX;
+  touchY = touch.clientY;
+});
+
+app.view.addEventListener("touchend", () => {
+  touchActive = false;
+});
+
+// =====================================================
+// COLLISION
 // =====================================================
 function checkCollision(nx, ny){
   for(const b of buildings){
@@ -172,7 +193,7 @@ function checkCollision(nx, ny){
 }
 
 // =====================================================
-// RAIN
+// CHUVA
 // =====================================================
 const rainDrops = [];
 
@@ -195,21 +216,39 @@ for(let i=0;i<250;i++){
 // =====================================================
 app.ticker.add(delta=>{
 
-  // movimento
   let nx = player.x;
   let ny = player.y;
 
-  if(keys["arrowup"]) ny -= 4;
-  if(keys["arrowdown"]) ny += 4;
-  if(keys["arrowleft"]) nx -= 4;
-  if(keys["arrowright"]) nx += 4;
+  const moveSpeed = 4;
+
+  // teclado
+  if(keys["arrowup"]) ny -= moveSpeed;
+  if(keys["arrowdown"]) ny += moveSpeed;
+  if(keys["arrowleft"]) nx -= moveSpeed;
+  if(keys["arrowright"]) nx += moveSpeed;
+
+  // touch
+  if(touchActive){
+    const centerX = app.screen.width/2;
+    const centerY = app.screen.height/2;
+
+    const dx = touchX - centerX;
+    const dy = touchY - centerY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if(dist > 20){
+      const angle = Math.atan2(dy,dx);
+      nx += Math.cos(angle)*moveSpeed;
+      ny += Math.sin(angle)*moveSpeed;
+    }
+  }
 
   if(!checkCollision(nx,ny)){
     player.x = nx;
     player.y = ny;
   }
 
-  // depth real
+  // depth
   buildingLayer.children.sort((a,b)=>a.y-b.y);
 
   // chuva
@@ -230,7 +269,7 @@ app.ticker.add(delta=>{
 
 });
 
-console.log("Neon Abyss Git Ready rodando.");
+console.log("Neon Abyss FINAL Mobile Ready");
 
 </script>
 </body>
