@@ -23,7 +23,9 @@ body {
 
 <div id="hint">🚀 Arraste a nave</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+<!-- PIXI V7 FIXA -->
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@7.3.2/dist/pixi.min.js"></script>
+
 <script>
 
 const app = new PIXI.Application({
@@ -32,14 +34,16 @@ const app = new PIXI.Application({
 });
 document.body.appendChild(app.view);
 
-PIXI.Loader.shared
+const loader = new PIXI.Loader();
+
+loader
 .add("ship", "assets/ship.png")
 .add("station", "assets/station_bg.png")
 .load(setup);
 
 function setup(loader, resources) {
 
-    // 🌌 ESTAÇÃO
+    // ESTAÇÃO
     const station = new PIXI.Sprite(resources.station.texture);
     station.anchor.set(0.5);
     station.x = app.screen.width / 2;
@@ -53,18 +57,17 @@ function setup(loader, resources) {
 
     app.stage.addChild(station);
 
-    // 🚀 NAVE
+    // NAVE
     const ship = new PIXI.Sprite(resources.ship.texture);
     ship.anchor.set(0.5);
     ship.x = app.screen.width * 0.7;
     ship.y = app.screen.height * 0.5;
     ship.scale.set(0.6);
     ship.interactive = true;
-    ship.buttonMode = true;
 
     app.stage.addChild(ship);
 
-    // 🎮 CONTROLE
+    // CONTROLE
     let dragging = false;
 
     ship
@@ -79,16 +82,19 @@ function setup(loader, resources) {
         }
     });
 
-    // 🌧️ CHUVA
+    // CHUVA
     const rain = [];
+
     for (let i = 0; i < 200; i++) {
         const drop = new PIXI.Graphics();
         drop.beginFill(0x00eaff);
         drop.drawRect(0, 0, 2, 10);
         drop.endFill();
+
         drop.x = Math.random() * app.screen.width;
         drop.y = Math.random() * app.screen.height;
         drop.speed = 5 + Math.random() * 5;
+
         rain.push(drop);
         app.stage.addChild(drop);
     }
@@ -96,6 +102,7 @@ function setup(loader, resources) {
     app.ticker.add(() => {
         rain.forEach(drop => {
             drop.y += drop.speed;
+
             if (drop.y > app.screen.height) {
                 drop.y = -10;
                 drop.x = Math.random() * app.screen.width;
