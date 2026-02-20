@@ -1,163 +1,22 @@
 <!doctype html>
-<html lang="pt-br">
+<html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>Neon Abyss</title>
-
+<meta charset="UTF-8">
+<title>Teste</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.3/pixi.min.js"></script>
-
 <style>
-body{
-  margin:0;
-  overflow:hidden;
-  background:#000;
-  touch-action:none;
-}
-canvas{ display:block; }
+body{margin:0;background:black;}
 </style>
 </head>
 <body>
 
 <script>
-(async () => {
-
-// ================= APP =================
 const app = new PIXI.Application({
-  resizeTo: window,
-  backgroundColor: 0x000000
+    resizeTo: window,
+    backgroundColor: 0xff0000
 });
+
 document.body.appendChild(app.view);
-
-// ================= WORLD =================
-const world = new PIXI.Container();
-app.stage.addChild(world);
-
-// FUNDO GRANDE (para não ficar tela preta)
-const bg = new PIXI.Graphics();
-bg.beginFill(0x111111);
-bg.drawRect(-2000,-2000,4000,4000);
-bg.endFill();
-world.addChild(bg);
-
-// ================= PLAYER =================
-const player = new PIXI.Graphics();
-player.beginFill(0x00ffff);
-player.drawCircle(0,0,15);
-player.endFill();
-world.addChild(player);
-
-// posição real do jogador no mundo
-let worldX = 0;
-let worldY = 0;
-
-// ================= CÂMERA SIMPLES =================
-function updateCamera(){
-  world.x = app.screen.width/2 - worldX;
-  world.y = app.screen.height/2 - worldY;
-}
-
-// ================= JOYSTICK =================
-const joystick = new PIXI.Container();
-app.stage.addChild(joystick);
-
-const base = new PIXI.Graphics();
-base.beginFill(0x00ffff,0.2);
-base.drawCircle(0,0,60);
-base.endFill();
-joystick.addChild(base);
-
-const stick = new PIXI.Graphics();
-stick.beginFill(0x00ffff,0.7);
-stick.drawCircle(0,0,30);
-stick.endFill();
-joystick.addChild(stick);
-
-function positionJoystick(){
-  joystick.position.set(100, app.screen.height - 120);
-}
-positionJoystick();
-
-window.addEventListener("resize", positionJoystick);
-
-let pointerId = null;
-let moveVector = {x:0,y:0};
-
-app.stage.eventMode = "static";
-app.stage.hitArea = app.screen;
-
-app.stage.on("pointerdown", e=>{
-  if(pointerId===null && e.global.x < app.screen.width/2){
-    pointerId = e.pointerId;
-    updateJoystick(e.global);
-  }
-});
-
-app.stage.on("pointermove", e=>{
-  if(e.pointerId===pointerId){
-    updateJoystick(e.global);
-  }
-});
-
-app.stage.on("pointerup", e=>{
-  if(e.pointerId===pointerId) resetJoystick();
-});
-
-app.stage.on("pointerupoutside", e=>{
-  if(e.pointerId===pointerId) resetJoystick();
-});
-
-function updateJoystick(pos){
-
-  const dx = pos.x - joystick.x;
-  const dy = pos.y - joystick.y;
-
-  const maxDist = 60;
-  const dist = Math.sqrt(dx*dx + dy*dy);
-
-  let nx = dx;
-  let ny = dy;
-
-  if(dist > maxDist){
-    const angle = Math.atan2(dy,dx);
-    nx = Math.cos(angle)*maxDist;
-    ny = Math.sin(angle)*maxDist;
-  }
-
-  stick.x = nx;
-  stick.y = ny;
-
-  moveVector.x = nx / maxDist;
-  moveVector.y = ny / maxDist;
-}
-
-function resetJoystick(){
-  pointerId = null;
-  stick.x = 0;
-  stick.y = 0;
-  moveVector.x = 0;
-  moveVector.y = 0;
-}
-
-// ================= GAME LOOP =================
-app.ticker.add(delta=>{
-
-  const speed = 6;
-
-  worldX += moveVector.x * speed;
-  worldY += moveVector.y * speed;
-
-  player.x = worldX;
-  player.y = worldY;
-
-  updateCamera();
-
-});
-
-// inicia câmera corretamente
-updateCamera();
-
-})();
 </script>
 
 </body>
