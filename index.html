@@ -110,6 +110,10 @@ player.position.set(app.screen.width/2, 300);
 player.blendMode = PIXI.BLEND_MODES.ADD;
 buildingLayer.addChild(player);
 
+// ================= SPEED CONTROL =================
+const speedKeyboard = 6;
+const speedJoystick = 6;
+
 // ================= KEYBOARD =================
 const keys = {};
 
@@ -226,16 +230,16 @@ app.ticker.add(delta=>{
 
   let nx=player.x;
   let ny=player.y;
-  const speed=6;
 
-  // MOVIMENTO NORMAL (como estava antes)
-  if(keys["ArrowUp"] || keys["KeyW"]) ny -= speed;
-  if(keys["ArrowDown"] || keys["KeyS"]) ny += speed;
-  if(keys["ArrowLeft"] || keys["KeyA"]) nx -= speed;
-  if(keys["ArrowRight"] || keys["KeyD"]) nx += speed;
+  // TECLADO
+  if(keys["ArrowUp"] || keys["KeyW"]) ny -= speedKeyboard;
+  if(keys["ArrowDown"] || keys["KeyS"]) ny += speedKeyboard;
+  if(keys["ArrowLeft"] || keys["KeyA"]) nx -= speedKeyboard;
+  if(keys["ArrowRight"] || keys["KeyD"]) nx += speedKeyboard;
 
-  nx += moveVector.x * speed * 1.5;
-  ny += moveVector.y * speed * 1.5;
+  // JOYSTICK
+  nx += moveVector.x * speedJoystick;
+  ny += moveVector.y * speedJoystick;
 
   player.x = nx;
   player.y = ny;
