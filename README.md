@@ -1,59 +1,178 @@
-# Neon Abyss Floor
+🌌 Neon Abyss Floor
 
-Uma estação orbital cyberpunk abandonada, hackeada por entidades alienígenas e dominada por neon, crypto-hologramas e naves voando no vazio.  
-Explore um mapa isométrico infinito (ou quase), clique em elementos para descobrir lores glitchados, miners robôs, portais bio-luminescentes e easter eggs crypto.  
-Inspirado no lendário Floor796, mas com a minha cara: Grimes vibes + cyberpunk BR + alien art + crypto chaos.
+A cyberpunk orbital station abandoned in deep space — hacked by alien entities and consumed by neon, crypto-holograms, and drifting ships in the void.
 
-<p align="center">
-  <img src="https://via.placeholder.com/800x450/0a001f/00ffff?text=Neon+Abyss+Floor+(em+desenvolvimento)" alt="Screenshot do mapa isométrico neon" width="800"/>
-  <!-- Troca por GIF real depois: <img src="./assets/demo.gif" alt="Demo" width="800"/> -->
-</p>
+Explore a stylized isometric world inspired by Floor796, but reimagined with:
 
-## Features (MVP atual)
+Grimes vibes + Brazilian cyberpunk + alien aesthetics + crypto chaos.
 
-- Mapa isométrico 2D scrollável e zoomável (mouse drag + wheel)
-- Prédios neon com glow e animação de piscar (GlowFilter do PixiJS)
-- Grid procedural simples para sensação de "abismo infinito"
-- Tema cyberpunk dark: neon teal/pink/purple + background void
-- Pan e zoom suave (com Zustand para state da câmera)
-- Responsivo + touch support (mobile ok)
-- Preparado para PWA (instala e roda offline)
+🖼 Preview
 
-## Roadmap (o que vem por aí)
+(Add a screenshot here)
+/assets/screenshot-neon-iso.png
 
-- Partículas de chuva neon + hologramas glitch
-- Naves/drones voando no background
-- Popups interativos com lore (clique → modal com meme/crypto/alien story)
-- Minimap + hotspots tooltips
-- Editor básico in-browser (arrastar sprites)
-- Som ambiente + SFX (Howler.js)
-- Procedural generation leve para rooms infinitos
-- Quest mode: encontre 10 easter eggs crypto
+🎮 Current MVP Features
+🧭 Isometric World
 
-## Tech Stack
+Procedural 2D isometric grid
 
-- **Frontend**: Vite + TypeScript
-- **Render**: PixiJS v8 (canvas performático, filters glow/CRT)
-- **State**: Zustand (leve e simples)
-- **Extras**: @pixi/filter-glow, @pixi/filter-pixelate (pra vibe retro-futurista)
-- **Deploy**: Vercel / GitHub Pages (demo ao vivo em breve)
+Smooth camera follow system
 
-## Demo Ao Vivo
+Infinite-feel map radius
 
-🔗 [https://neon-abyss-floor.vercel.app](https://neon-abyss-floor.vercel.app) (atualiza quando deployar)
+Depth sorting (z-index by Y position)
 
-## Como Rodar Localmente
+🚀 Player
 
-```bash
-# Clone o repo
-git clone https://github.com/SEU_USER/neon-abyss-floor.git
+Neon spaceship sprite
+
+Keyboard controls (WASD + Arrow keys)
+
+Mobile virtual joystick
+
+Smooth camera tracking
+
+🌃 Atmosphere
+
+Cyberpunk skyline background (parallax effect)
+
+Neon rain particle system
+
+Dark void aesthetic
+
+Additive blending glow effects
+
+📱 Mobile Ready
+
+Responsive canvas (auto-resize)
+
+Touch controls
+
+Joystick auto-detection
+
+Mobile browser compatible
+
+🔥 In Progress / Next Improvements
+Visual Enhancements
+
+Multi-layer depth rain system
+
+Neon glow filters (Blur / ColorMatrix)
+
+Procedural building sprites
+
+Animated holograms
+
+Gameplay Layer
+
+Interactive lore popups
+
+Glitched crypto terminals
+
+Alien bio-luminescent portals
+
+Drone ships in background
+
+Systems
+
+True isometric movement vector
+
+Map boundary system
+
+Object pooling (performance boost)
+
+RenderTexture optimization for tiles
+
+🧠 Roadmap
+
+🌧 Advanced particle rain system
+
+🛸 Flying drones / background ships
+
+📖 Interactive lore system (click → modal)
+
+🗺 Mini-map + hotspots
+
+🧩 Procedural room expansion
+
+🎵 Ambient cyberpunk soundtrack (Howler.js)
+
+🧬 Quest Mode: Find 10 hidden crypto easter eggs
+
+🛠 In-browser mini editor (drag & place sprites)
+
+📦 PWA full offline support
+
+🛠 Tech Stack
+
+Core Engine
+
+PixiJS v7 (Canvas/WebGL renderer)
+
+Rendering
+
+PixiJS Graphics
+
+Additive blending
+
+Container-based camera system
+
+Architecture
+
+Vanilla JS (current stable build)
+
+Migrating to modular structure (planned TypeScript upgrade)
+
+Deployment
+
+GitHub Pages
+
+Vercel (optional future)
+
+🚀 Live Demo
+
+🔗 https://neon-abyss-floor.vercel.app
+
+(Update when redeployed)
+
+💻 Run Locally
+
+If using the static version:
+
+# Clone repository
+git clone https://github.com/YOUR_USER/neon-abyss-floor.git
+
 cd neon-abyss-floor
 
-# Instala dependências
+# Open index.html in browser
+
+If migrating to Vite + TypeScript version:
+
 npm install
-
-# Roda em dev (http://localhost:5173)
 npm run dev
-
-# Build pra produção
 npm run build
+🎨 Visual Identity
+
+Neon Teal / Purple / Pink palette
+
+Cyberpunk darkness
+
+Alien glitch atmosphere
+
+Crypto-mythic undertone
+
+Brazilian underground sci-fi influence
+
+📌 Project Vision
+
+Neon Abyss Floor is not just a visual experiment.
+
+It’s a living cyberpunk sandbox —
+a digital ruin drifting in space —
+where crypto relics, alien tech and neon ghosts coexist.
+
+Minimal at first. Expanding over time.
+
+📄 License
+
+MIT
