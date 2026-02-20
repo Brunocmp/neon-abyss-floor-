@@ -1,4 +1,4 @@
-import * as PIXI from 'pixi.js'
+console.log("🔥 MAIN NOVO RODANDO 🔥")import * as PIXI from 'pixi.js'
 import { GlowFilter } from '@pixi/filter-glow'
 
 const app = new PIXI.Application({
