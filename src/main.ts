@@ -1,116 +1,113 @@
-import * as PIXI from 'pixi.js';
-import { create } from 'zustand';
-import { GlowFilter } from 'pixi-filters/glow';
-
-interface CameraState {
-  x: number;
-  y: number;
-  zoom: number;
-  setPosition: (x: number, y: number) => void;
-  setZoom: (zoom: number) => void;
-}
-
-const useCamera = create<CameraState>((set) => ({
-  x: 0,
-  y: 0,
-  zoom: 1,
-  setPosition: (x, y) => set({ x, y }),
-  setZoom: (zoom) => set({ zoom: Math.max(0.5, Math.min(3, zoom)) }),
-}));
+import * as PIXI from 'pixi.js'
+import { GlowFilter } from '@pixi/filter-glow'
 
 const app = new PIXI.Application({
-  width: window.innerWidth,
-  height: window.innerHeight,
-  backgroundColor: 0x0a001f,
   resizeTo: window,
-  antialias: true,
-});
+  backgroundColor: 0x0f0f0f,
+  antialias: true
+})
 
-document.body.appendChild(app.view as HTMLCanvasElement);
+document.body.appendChild(app.view as HTMLCanvasElement)
 
-const mapContainer = new PIXI.Container();
-app.stage.addChild(mapContainer);
+// ================= CONTAINERS =================
+const world = new PIXI.Container()
+app.stage.addChild(world)
 
-function cartToIso(x: number, y: number, tileWidth = 64, tileHeight = 32) {
-  return {
-    x: (x - y) * tileWidth / 2,
-    y: (x + y) * tileHeight / 2,
-  };
-}
+const rainLayer = new PIXI.Container()
+world.addChild(rainLayer)
 
-function createNeonBuilding(x: number, y: number) {
-  const isoPos = cartToIso(x, y);
-  const building = new PIXI.Graphics();
-  building.beginFill(0x1a0033);
-  building.drawRect(-32, -96, 64, 128);
-  building.endFill();
+// ================= SHIP =================
+const ship = new PIXI.Graphics()
+ship.beginFill(0x00ffff)
+ship.drawPolygon([
+  -20, 0,
+  20, -15,
+  20, 15
+])
+ship.endFill()
 
-  const neon = new PIXI.Graphics();
-  neon.lineStyle(4, 0x00ffff, 0.8);
-  neon.drawRect(-30, -94, 60, 124);
-  building.addChild(neon);
+ship.x = app.screen.width / 2
+ship.y = app.screen.height / 2
 
-  const glowFilter = new GlowFilter({
+// Glow na nave
+ship.filters = [
+  new GlowFilter({
     distance: 15,
-    outerStrength: 2,
+    outerStrength: 3,
+    innerStrength: 1,
     color: 0x00ffff,
-    quality: 0.1,
-  });
-  building.filters = [glowFilter];
+    quality: 0.5
+  })
+]
 
-  app.ticker.add(() => {
-    neon.alpha = 0.8 + Math.sin(app.ticker.lastTime * 0.005) * 0.2;
-  });
+world.addChild(ship)
 
-  building.position.set(isoPos.x + app.screen.width / 2, isoPos.y + app.screen.height / 2 - 200);
-  mapContainer.addChild(building);
-  return building;
+// ================= MOVEMENT =================
+const keys: Record<string, boolean> = {}
+
+window.addEventListener('keydown', (e) => keys[e.key] = true)
+window.addEventListener('keyup', (e) => keys[e.key] = false)
+
+const speed = 5
+
+// ================= RAIN (MULTI LAYER) =================
+const rainDrops: PIXI.Graphics[] = []
+
+function createRainLayer(count:number, speedMin:number, speedMax:number, width:number, height:number, alpha:number){
+
+  for(let i=0;i<count;i++){
+
+    const drop = new PIXI.Graphics()
+    drop.beginFill(0x00ffff, alpha)
+    drop.drawRect(0,0,width,height)
+    drop.endFill()
+
+    drop.x = Math.random() * app.screen.width
+    drop.y = Math.random() * app.screen.height
+    ;(drop as any).speed = Math.random() * (speedMax - speedMin) + speedMin
+
+    // Glow leve na chuva
+    drop.filters = [
+      new GlowFilter({
+        distance: 6,
+        outerStrength: 2,
+        innerStrength: 0,
+        color: 0x00ffff,
+        quality: 0.3
+      })
+    ]
+
+    rainLayer.addChild(drop)
+    rainDrops.push(drop)
+  }
 }
 
-for (let ix = -5; ix <= 5; ix++) {
-  for (let iy = -5; iy <= 5; iy++) {
-    if (Math.abs(ix) + Math.abs(iy) < 8) {
-      createNeonBuilding(ix, iy);
+// Longe
+createRainLayer(120, 1, 2, 1, 8, 0.3)
+
+// Médio
+createRainLayer(80, 2, 4, 2, 10, 0.6)
+
+// Próximo
+createRainLayer(50, 4, 7, 2, 14, 0.9)
+
+// ================= GAME LOOP =================
+app.ticker.add((delta) => {
+
+  // Movimento normal (não diagonal)
+  if(keys['ArrowUp']) ship.y -= speed
+  if(keys['ArrowDown']) ship.y += speed
+  if(keys['ArrowLeft']) ship.x -= speed
+  if(keys['ArrowRight']) ship.x += speed
+
+  // Atualiza chuva
+  rainDrops.forEach(d=>{
+    ;(d as any).y += (d as any).speed * delta
+
+    if((d as any).y > app.screen.height){
+      d.y = -20
+      d.x = Math.random() * app.screen.width
     }
-  }
-}
+  })
 
-let isDragging = false;
-let lastMouse = { x: 0, y: 0 };
-
-app.stage.eventMode = 'static';
-app.stage.hitArea = app.screen;
-
-app.stage.on('pointerdown', (e) => {
-  isDragging = true;
-  lastMouse = { x: e.global.x, y: e.global.y };
-});
-
-app.stage.on('pointermove', (e) => {
-  if (isDragging) {
-    const dx = e.global.x - lastMouse.x;
-    const dy = e.global.y - lastMouse.y;
-    useCamera.getState().setPosition(
-      useCamera.getState().x - dx / useCamera.getState().zoom,
-      useCamera.getState().y - dy / useCamera.getState().zoom
-    );
-    lastMouse = { x: e.global.x, y: e.global.y };
-  }
-});
-
-app.stage.on('pointerup', () => { isDragging = false; });
-app.stage.on('pointerupoutside', () => { isDragging = false; });
-
-window.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const delta = e.deltaY > 0 ? -0.1 : 0.1;
-  useCamera.getState().setZoom(useCamera.getState().zoom + delta);
-});
-
-app.ticker.add(() => {
-  const { x, y, zoom } = useCamera.getState();
-  mapContainer.position.set(-x * zoom + app.screen.width / 2, -y * zoom + app.screen.height / 2);
-  mapContainer.scale.set(zoom);
-});
-
-window.addEventListener('resize', () => app.renderer.resize(window.innerWidth, window.innerHeight));
+})
