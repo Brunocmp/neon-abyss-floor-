@@ -23,9 +23,7 @@ canvas{ display:block; }
 
 (async () => {
 
-// =====================================================
-// APP
-// =====================================================
+// ================= APP =================
 const app = new PIXI.Application({
   resizeTo: window,
   backgroundColor: 0x000000,
@@ -33,17 +31,13 @@ const app = new PIXI.Application({
 });
 document.body.appendChild(app.view);
 
-// =====================================================
-// PRELOAD (CORREÇÃO DO FUNDO)
-// =====================================================
+// ================= PRELOAD =================
 await PIXI.Assets.load([
   "./assets/station_bg.png",
   "./assets/ship.png"
 ]);
 
-// =====================================================
-// SKYLINE (AGORA SÓ CRIA APÓS CARREGAR)
-// =====================================================
+// ================= BACKGROUND =================
 const skyline = PIXI.Sprite.from("./assets/station_bg.png");
 skyline.anchor.set(0.5);
 skyline.position.set(app.screen.width/2, app.screen.height/2);
@@ -54,12 +48,9 @@ const scale = Math.max(
 );
 skyline.scale.set(scale);
 skyline.alpha = 0.6;
-
 app.stage.addChild(skyline);
 
-// =====================================================
-// CAMERA + LAYERS
-// =====================================================
+// ================= CAMERA =================
 const camera = new PIXI.Container();
 app.stage.addChild(camera);
 
@@ -73,9 +64,7 @@ camera.addChild(groundLayer);
 camera.addChild(buildingLayer);
 app.stage.addChild(rainLayer);
 
-// =====================================================
-// ISO MAP
-// =====================================================
+// ================= ISO MAP =================
 function cartToIso(x,y){
   return {
     x:(x-y)*32,
@@ -84,7 +73,6 @@ function cartToIso(x,y){
 }
 
 const MAP_RADIUS = 6;
-const buildings = [];
 
 for(let x=-MAP_RADIUS;x<=MAP_RADIUS;x++){
   for(let y=-MAP_RADIUS;y<=MAP_RADIUS;y++){
@@ -108,57 +96,103 @@ for(let x=-MAP_RADIUS;x<=MAP_RADIUS;x++){
   }
 }
 
-// =====================================================
-// PLAYER
-// =====================================================
+// ================= PLAYER =================
 const player = PIXI.Sprite.from("./assets/ship.png");
 player.anchor.set(0.5);
 player.scale.set(0.25);
 player.position.set(app.screen.width/2, 300);
 player.blendMode = PIXI.BLEND_MODES.ADD;
-
 buildingLayer.addChild(player);
 
-// =====================================================
-// INPUT CORRIGIDO
-// =====================================================
+// ================= KEYBOARD =================
 const keys = {};
 
-window.addEventListener("keydown", e=>{
-  keys[e.code] = true;
-});
-
-window.addEventListener("keyup", e=>{
-  keys[e.code] = false;
-});
-
-// 🔥 CORREÇÃO IMPORTANTE
+window.addEventListener("keydown", e=> keys[e.code]=true);
+window.addEventListener("keyup", e=> keys[e.code]=false);
 window.addEventListener("blur", ()=>{
-  for(let k in keys) keys[k] = false;
+  for(let k in keys) keys[k]=false;
 });
 
-// Touch usando pointer (mais estável)
-let pointerActive = false;
-let pointerPos = {x:0,y:0};
+// ================= JOYSTICK MOBILE =================
+const joystick = new PIXI.Container();
+app.stage.addChild(joystick);
+
+const base = new PIXI.Graphics();
+base.beginFill(0x00ffff,0.2);
+base.drawCircle(0,0,60);
+base.endFill();
+joystick.addChild(base);
+
+const stick = new PIXI.Graphics();
+stick.beginFill(0x00ffff,0.6);
+stick.drawCircle(0,0,30);
+stick.endFill();
+joystick.addChild(stick);
+
+joystick.position.set(100, app.screen.height - 100);
+joystick.alpha = 0.8;
+
+let pointerId = null;
+let moveVector = {x:0,y:0};
 
 app.stage.eventMode = "static";
 app.stage.hitArea = app.screen;
 
 app.stage.on("pointerdown", e=>{
-  pointerActive = true;
-  pointerPos = e.global;
+  if(pointerId===null && e.global.x < app.screen.width/2){
+    pointerId = e.pointerId;
+    updateJoystick(e.global);
+  }
 });
 
 app.stage.on("pointermove", e=>{
-  pointerPos = e.global;
+  if(e.pointerId===pointerId){
+    updateJoystick(e.global);
+  }
 });
 
-app.stage.on("pointerup", ()=> pointerActive = false);
-app.stage.on("pointerupoutside", ()=> pointerActive = false);
+app.stage.on("pointerup", e=>{
+  if(e.pointerId===pointerId){
+    resetJoystick();
+  }
+});
 
-// =====================================================
-// CHUVA
-// =====================================================
+app.stage.on("pointerupoutside", e=>{
+  if(e.pointerId===pointerId){
+    resetJoystick();
+  }
+});
+
+function updateJoystick(pos){
+
+  const dx = pos.x - joystick.x;
+  const dy = pos.y - joystick.y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+
+  const maxDist = 60;
+
+  if(dist > maxDist){
+    const angle = Math.atan2(dy,dx);
+    stick.x = Math.cos(angle) * maxDist;
+    stick.y = Math.sin(angle) * maxDist;
+  }else{
+    stick.x = dx;
+    stick.y = dy;
+  }
+
+  moveVector.x = stick.x / maxDist;
+  moveVector.y = stick.y / maxDist;
+}
+
+function resetJoystick(){
+  pointerId = null;
+  stick.x = 0;
+  stick.y = 0;
+  moveVector.x = 0;
+  moveVector.y = 0;
+}
+
+// ================= RAIN =================
 const rainDrops=[];
 for(let i=0;i<250;i++){
   const drop=new PIXI.Graphics();
@@ -172,47 +206,36 @@ for(let i=0;i<250;i++){
   rainDrops.push(drop);
 }
 
-// =====================================================
-// GAME LOOP
-// =====================================================
+// ================= GAME LOOP =================
 app.ticker.add(delta=>{
 
   let nx=player.x;
   let ny=player.y;
-  const speed=5;
+  const speed=6;
 
-  // teclado mais estável
+  // teclado
   if(keys["ArrowUp"] || keys["KeyW"]) ny -= speed;
   if(keys["ArrowDown"] || keys["KeyS"]) ny += speed;
   if(keys["ArrowLeft"] || keys["KeyA"]) nx -= speed;
   if(keys["ArrowRight"] || keys["KeyD"]) nx += speed;
 
-  // touch estável
-  if(pointerActive){
-    const dx = pointerPos.x - player.x;
-    const dy = pointerPos.y - player.y;
-    const dist = Math.sqrt(dx*dx+dy*dy);
-
-    if(dist > 10){
-      nx += (dx/dist) * speed;
-      ny += (dy/dist) * speed;
-    }
-  }
+  // joystick
+  nx += moveVector.x * speed * 1.5;
+  ny += moveVector.y * speed * 1.5;
 
   player.x = nx;
   player.y = ny;
 
   buildingLayer.children.sort((a,b)=>a.y-b.y);
 
-  // parallax
-  skyline.x = app.screen.width/2 + camera.x*0.05;
-  skyline.y = app.screen.height/2 + camera.y*0.05;
-
   const targetX=-player.x+app.screen.width/2;
   const targetY=-player.y+app.screen.height/2;
 
   camera.x+=(targetX-camera.x)*0.08;
   camera.y+=(targetY-camera.y)*0.08;
+
+  skyline.x = app.screen.width/2 + camera.x*0.05;
+  skyline.y = app.screen.height/2 + camera.y*0.05;
 
   rainDrops.forEach(d=>{
     d.y+=d.speed*delta;
@@ -223,8 +246,6 @@ app.ticker.add(delta=>{
   });
 
 });
-
-console.log("Neon Abyss - Stable Build Ready 🚀");
 
 })();
 </script>
