@@ -226,23 +226,16 @@ app.ticker.add(delta=>{
 
   let nx=player.x;
   let ny=player.y;
-  const speed=4;
+  const speed=6;
 
-  // TECLADO ISO
-  let inputX = 0;
-  let inputY = 0;
+  // MOVIMENTO NORMAL (como estava antes)
+  if(keys["ArrowUp"] || keys["KeyW"]) ny -= speed;
+  if(keys["ArrowDown"] || keys["KeyS"]) ny += speed;
+  if(keys["ArrowLeft"] || keys["KeyA"]) nx -= speed;
+  if(keys["ArrowRight"] || keys["KeyD"]) nx += speed;
 
-  if(keys["ArrowUp"] || keys["KeyW"]) inputY -= 1;
-  if(keys["ArrowDown"] || keys["KeyS"]) inputY += 1;
-  if(keys["ArrowLeft"] || keys["KeyA"]) inputX -= 1;
-  if(keys["ArrowRight"] || keys["KeyD"]) inputX += 1;
-
-  nx += (inputX - inputY) * speed;
-  ny += (inputX + inputY) * speed * 0.5;
-
-  // JOYSTICK ISO
-  nx += (moveVector.x - moveVector.y) * speed;
-  ny += (moveVector.x + moveVector.y) * speed * 0.5;
+  nx += moveVector.x * speed * 1.5;
+  ny += moveVector.y * speed * 1.5;
 
   player.x = nx;
   player.y = ny;
