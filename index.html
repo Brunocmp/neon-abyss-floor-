@@ -1,55 +1,107 @@
 <!doctype html>
-<html>
+<html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Teste Mundo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Neon Abyss</title>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.3/pixi.min.js"></script>
+
 <style>
-body{margin:0;background:black;overflow:hidden;}
+body{
+  margin:0;
+  overflow:hidden;
+  background:#000;
+  touch-action:none;
+}
+canvas{ display:block; }
 </style>
 </head>
 <body>
 
 <script>
+(async()=>{
+
+// ================= APP =================
 const app = new PIXI.Application({
-    resizeTo: window,
-    backgroundColor: 0x000000
+  resizeTo: window,
+  backgroundColor: 0x000000
 });
 document.body.appendChild(app.view);
 
-// WORLD
+// ================= LOAD ASSETS =================
+await PIXI.Assets.load([
+  "./assets/station_bg.png",
+  "./assets/ship.png"
+]);
+
+// ================= WORLD =================
 const world = new PIXI.Container();
 app.stage.addChild(world);
 
-// FUNDO GRANDE
-const bg = new PIXI.Graphics();
-bg.beginFill(0x222222);
-bg.drawRect(-2000, -2000, 4000, 4000);
-bg.endFill();
+// ================= BACKGROUND ESTAÇÃO =================
+const bg = PIXI.Sprite.from("./assets/station_bg.png");
+bg.anchor.set(0.5);
 world.addChild(bg);
 
-// PLAYER
-const player = new PIXI.Graphics();
-player.beginFill(0x00ffff);
-player.drawCircle(0, 0, 20);
-player.endFill();
+// ================= PLAYER =================
+const player = PIXI.Sprite.from("./assets/ship.png");
+player.anchor.set(0.5);
+player.scale.set(0.25);
+player.blendMode = PIXI.BLEND_MODES.ADD;
 world.addChild(player);
 
-// posição real
+// ================= CHUVA =================
+const rainLayer = new PIXI.Container();
+app.stage.addChild(rainLayer);
+
+const rainDrops = [];
+for(let i=0;i<200;i++){
+  const drop = new PIXI.Graphics();
+  drop.beginFill(0x00ffff);
+  drop.drawRect(0,0,2,10);
+  drop.endFill();
+  drop.x = Math.random()*app.screen.width;
+  drop.y = Math.random()*app.screen.height;
+  drop.speed = Math.random()*4+2;
+  rainLayer.addChild(drop);
+  rainDrops.push(drop);
+}
+
+// ================= POSIÇÃO REAL =================
 let worldX = 0;
 let worldY = 0;
 
-// GAME LOOP
+// ================= CONTROLE SIMPLES (teste) =================
+window.addEventListener("keydown", e=>{
+  if(e.code==="ArrowUp") worldY-=10;
+  if(e.code==="ArrowDown") worldY+=10;
+  if(e.code==="ArrowLeft") worldX-=10;
+  if(e.code==="ArrowRight") worldX+=10;
+});
+
+// ================= GAME LOOP =================
 app.ticker.add(()=>{
 
-    player.position.set(worldX, worldY);
+  // posiciona player
+  player.position.set(worldX, worldY);
 
-    // câmera correta usando pivot
-    world.pivot.set(worldX, worldY);
-    world.position.set(app.screen.width/2, app.screen.height/2);
+  // câmera correta
+  world.pivot.set(worldX, worldY);
+  world.position.set(app.screen.width/2, app.screen.height/2);
+
+  // chuva
+  rainDrops.forEach(d=>{
+    d.y+=d.speed;
+    if(d.y>app.screen.height){
+      d.y=-20;
+      d.x=Math.random()*app.screen.width;
+    }
+  });
 
 });
 
+})();
 </script>
 
 </body>
