@@ -1,154 +1,288 @@
-import * as PIXI from 'pixi.js'
-import { GlowFilter } from '@pixi/filter-glow'
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Neon Abyss</title>
 
+<link rel="icon" type="image/png" href="./assets/neon-abyss-floor.png">
+<link rel="apple-touch-icon" href="./assets/neon-abyss-floor.png">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.3/pixi.min.js"></script>
+
+<style>
+body{
+  margin:0;
+  overflow:hidden;
+  background:#000;
+  touch-action:none;
+}
+canvas{ display:block; }
+</style>
+</head>
+<body>
+
+<script>
+(async () => {
+
+// ================= APP =================
 const app = new PIXI.Application({
   resizeTo: window,
-  backgroundColor: 0x0a0a0f,
+  backgroundColor: 0x000000,
   antialias: true
-})
+});
+document.body.appendChild(app.view);
 
-document.body.appendChild(app.view as HTMLCanvasElement)
+// ================= PRELOAD =================
+await PIXI.Assets.load([
+  "./assets/station_bg.png",
+  "./assets/ship.png"
+]);
 
-// ================= CONTAINERS =================
-const world = new PIXI.Container()
-app.stage.addChild(world)
+// ================= BACKGROUND =================
+const skyline = PIXI.Sprite.from("./assets/station_bg.png");
+skyline.anchor.set(0.5);
 
-const cityLayer = new PIXI.Container()
-world.addChild(cityLayer)
+function updateSkyline(){
+  const scale = Math.max(
+    app.screen.width / skyline.texture.width,
+    app.screen.height / skyline.texture.height
+  );
+  skyline.scale.set(scale);
+  skyline.position.set(app.screen.width/2, app.screen.height/2);
+}
 
-const rainLayer = new PIXI.Container()
-world.addChild(rainLayer)
+updateSkyline();
+skyline.alpha = 0.6;
+app.stage.addChild(skyline);
 
-// ================= CITY =================
-const buildings: PIXI.Graphics[] = []
+// ================= CAMERA =================
+const camera = new PIXI.Container();
+app.stage.addChild(camera);
 
-function createCity(){
+const groundLayer = new PIXI.Container();
+const buildingLayer = new PIXI.Container();
+const rainLayer = new PIXI.Container();
 
-  const buildingWidth = 60
-  const spacing = 20
-  const total = Math.ceil(app.screen.width / (buildingWidth + spacing)) + 2
+buildingLayer.sortableChildren = true;
 
-  for(let i = 0; i < total; i++){
+camera.addChild(groundLayer);
+camera.addChild(buildingLayer);
+app.stage.addChild(rainLayer);
 
-    const height = 150 + Math.random() * 200
+// ================= ISO MAP =================
+function cartToIso(x,y){
+  return {
+    x:(x-y)*32,
+    y:(x+y)*16
+  };
+}
 
-    const building = new PIXI.Graphics()
-    building.beginFill(0x111122)
-    building.drawRect(0, 0, buildingWidth, height)
-    building.endFill()
+const MAP_RADIUS = 6;
 
-    building.x = i * (buildingWidth + spacing)
-    building.y = app.screen.height - height
+for(let x=-MAP_RADIUS;x<=MAP_RADIUS;x++){
+  for(let y=-MAP_RADIUS;y<=MAP_RADIUS;y++){
 
-    // Glow sutil no contorno
-    building.filters = [
-      new GlowFilter({
-        distance: 10,
-        outerStrength: 1,
-        innerStrength: 0,
-        color: 0xff00ff,
-        quality: 0.3
-      })
-    ]
+    if(Math.abs(x)+Math.abs(y)<MAP_RADIUS+2){
 
-    cityLayer.addChild(building)
-    buildings.push(building)
+      const pos = cartToIso(x,y);
 
-    // Janelas
-    for(let y = 10; y < height - 10; y += 20){
-      for(let x = 10; x < buildingWidth - 10; x += 15){
+      const tile = new PIXI.Graphics();
+      tile.beginFill(0x0d0022,0.8);
+      tile.drawPolygon([0,0,32,16,0,32,-32,16]);
+      tile.endFill();
 
-        if(Math.random() > 0.5){
-          const windowLight = new PIXI.Graphics()
-          windowLight.beginFill(0x00ffff, Math.random())
-          windowLight.drawRect(0,0,6,10)
-          windowLight.endFill()
+      tile.position.set(
+        pos.x + app.screen.width/2,
+        pos.y + 250
+      );
 
-          windowLight.x = building.x + x
-          windowLight.y = building.y + y
-
-          cityLayer.addChild(windowLight)
-        }
-      }
+      groundLayer.addChild(tile);
     }
   }
 }
 
-createCity()
+// ================= PLAYER =================
+const player = PIXI.Sprite.from("./assets/ship.png");
+player.anchor.set(0.5);
+player.scale.set(0.25);
+player.position.set(app.screen.width/2, 300);
+player.blendMode = PIXI.BLEND_MODES.ADD;
+buildingLayer.addChild(player);
 
-// ================= SHIP =================
-const ship = new PIXI.Graphics()
-ship.beginFill(0x00ffff)
-ship.drawPolygon([
-  -20, 0,
-  20, -15,
-  20, 15
-])
-ship.endFill()
+// ================= SPEED CONTROL =================
+const speedKeyboard = 6;
+const speedJoystick = 6;
 
-ship.x = app.screen.width / 2
-ship.y = app.screen.height / 2
+// ================= KEYBOARD =================
+const keys = {};
 
-ship.filters = [
-  new GlowFilter({
-    distance: 15,
-    outerStrength: 3,
-    innerStrength: 1,
-    color: 0x00ffff,
-    quality: 0.5
-  })
-]
+window.addEventListener("keydown", e=> keys[e.code]=true);
+window.addEventListener("keyup", e=> keys[e.code]=false);
+window.addEventListener("blur", ()=>{
+  for(let k in keys) keys[k]=false;
+});
 
-world.addChild(ship)
+// ================= JOYSTICK =================
+const joystick = new PIXI.Container();
+app.stage.addChild(joystick);
 
-// ================= MOVEMENT =================
-const keys: Record<string, boolean> = {}
+const base = new PIXI.Graphics();
+base.beginFill(0x00ffff,0.2);
+base.drawCircle(0,0,60);
+base.endFill();
+joystick.addChild(base);
 
-window.addEventListener('keydown', (e) => keys[e.key] = true)
-window.addEventListener('keyup', (e) => keys[e.key] = false)
+const stick = new PIXI.Graphics();
+stick.beginFill(0x00ffff,0.6);
+stick.drawCircle(0,0,30);
+stick.endFill();
+joystick.addChild(stick);
 
-const speed = 5
+function updateJoystickPosition(){
+  joystick.position.set(100, app.screen.height - 100);
+}
 
-// ================= RAIN =================
-const rainDrops: PIXI.Graphics[] = []
+updateJoystickPosition();
+joystick.alpha = 0.8;
 
-function createRainLayer(count:number, speedMin:number, speedMax:number, width:number, height:number, alpha:number){
+let pointerId = null;
+let moveVector = {x:0,y:0};
+
+app.stage.eventMode = "static";
+app.stage.hitArea = app.screen;
+
+app.stage.on("pointerdown", e=>{
+  if(pointerId===null && e.global.x < app.screen.width/2){
+    pointerId = e.pointerId;
+    updateJoystick(e.global);
+  }
+});
+
+app.stage.on("pointermove", e=>{
+  if(e.pointerId===pointerId){
+    updateJoystick(e.global);
+  }
+});
+
+app.stage.on("pointerup", e=>{
+  if(e.pointerId===pointerId){
+    resetJoystick();
+  }
+});
+
+app.stage.on("pointerupoutside", e=>{
+  if(e.pointerId===pointerId){
+    resetJoystick();
+  }
+});
+
+function updateJoystick(pos){
+  const dx = pos.x - joystick.x;
+  const dy = pos.y - joystick.y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  const maxDist = 60;
+
+  if(dist > maxDist){
+    const angle = Math.atan2(dy,dx);
+    stick.x = Math.cos(angle) * maxDist;
+    stick.y = Math.sin(angle) * maxDist;
+  }else{
+    stick.x = dx;
+    stick.y = dy;
+  }
+
+  moveVector.x = stick.x / maxDist;
+  moveVector.y = stick.y / maxDist;
+}
+
+function resetJoystick(){
+  pointerId = null;
+  stick.x = 0;
+  stick.y = 0;
+  moveVector.x = 0;
+  moveVector.y = 0;
+}
+
+// ================= RAIN (MULTI LAYER) =================
+const rainDrops = [];
+
+function createRainLayer(count, speedMin, speedMax, width, height, alpha){
 
   for(let i=0;i<count;i++){
 
-    const drop = new PIXI.Graphics()
-    drop.beginFill(0x00ffff, alpha)
-    drop.drawRect(0,0,width,height)
-    drop.endFill()
+    const drop = new PIXI.Graphics();
+    drop.beginFill(0x00ffff, alpha);
+    drop.drawRect(0,0,width,height);
+    drop.endFill();
 
-    drop.x = Math.random() * app.screen.width
-    drop.y = Math.random() * app.screen.height
-    ;(drop as any).speed = Math.random() * (speedMax - speedMin) + speedMin
+    drop.x = Math.random() * app.screen.width;
+    drop.y = Math.random() * app.screen.height;
+    drop.speed = Math.random() * (speedMax - speedMin) + speedMin;
 
-    rainLayer.addChild(drop)
-    rainDrops.push(drop)
+    rainLayer.addChild(drop);
+    rainDrops.push(drop);
   }
 }
 
-createRainLayer(120, 1, 2, 1, 8, 0.3)
-createRainLayer(80, 2, 4, 2, 10, 0.6)
-createRainLayer(50, 4, 7, 2, 14, 0.9)
+// Longe
+createRainLayer(120, 1, 2, 1, 8, 0.3);
+
+// Médio
+createRainLayer(80, 2, 4, 2, 10, 0.6);
+
+// Próximo
+createRainLayer(50, 4, 7, 2, 14, 0.9);
+
+// ================= RESIZE =================
+window.addEventListener("resize", ()=>{
+  app.stage.hitArea = app.screen;
+  updateJoystickPosition();
+  updateSkyline();
+});
 
 // ================= GAME LOOP =================
-app.ticker.add((delta) => {
+app.ticker.add(delta=>{
 
-  if(keys['ArrowUp']) ship.y -= speed
-  if(keys['ArrowDown']) ship.y += speed
-  if(keys['ArrowLeft']) ship.x -= speed
-  if(keys['ArrowRight']) ship.x += speed
+  let nx=player.x;
+  let ny=player.y;
+
+  // TECLADO
+  if(keys["ArrowUp"] || keys["KeyW"]) ny -= speedKeyboard;
+  if(keys["ArrowDown"] || keys["KeyS"]) ny += speedKeyboard;
+  if(keys["ArrowLeft"] || keys["KeyA"]) nx -= speedKeyboard;
+  if(keys["ArrowRight"] || keys["KeyD"]) nx += speedKeyboard;
+
+  // JOYSTICK
+  nx += moveVector.x * speedJoystick;
+  ny += moveVector.y * speedJoystick;
+
+  player.x = nx;
+  player.y = ny;
+
+  buildingLayer.children.sort((a,b)=>a.y-b.y);
+
+  const targetX=-player.x+app.screen.width/2;
+  const targetY=-player.y+app.screen.height/2;
+
+  camera.x+=(targetX-camera.x)*0.08;
+  camera.y+=(targetY-camera.y)*0.08;
+
+  skyline.x = app.screen.width/2 + camera.x*0.05;
+  skyline.y = app.screen.height/2 + camera.y*0.05;
 
   rainDrops.forEach(d=>{
-    ;(d as any).y += (d as any).speed * delta
+    d.y += d.speed * delta;
 
-    if((d as any).y > app.screen.height){
-      d.y = -20
-      d.x = Math.random() * app.screen.width
+    if(d.y > app.screen.height){
+      d.y = -20;
+      d.x = Math.random() * app.screen.width;
     }
-  })
+  });
 
-})
+});
+
+})();
+</script>
+</body>
+</html>
