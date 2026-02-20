@@ -3,7 +3,7 @@ import { GlowFilter } from '@pixi/filter-glow'
 
 const app = new PIXI.Application({
   resizeTo: window,
-  backgroundColor: 0x0f0f0f,
+  backgroundColor: 0x0a0a0f,
   antialias: true
 })
 
@@ -13,8 +13,68 @@ document.body.appendChild(app.view as HTMLCanvasElement)
 const world = new PIXI.Container()
 app.stage.addChild(world)
 
+const cityLayer = new PIXI.Container()
+world.addChild(cityLayer)
+
 const rainLayer = new PIXI.Container()
 world.addChild(rainLayer)
+
+// ================= CITY =================
+const buildings: PIXI.Graphics[] = []
+
+function createCity(){
+
+  const buildingWidth = 60
+  const spacing = 20
+  const total = Math.ceil(app.screen.width / (buildingWidth + spacing)) + 2
+
+  for(let i = 0; i < total; i++){
+
+    const height = 150 + Math.random() * 200
+
+    const building = new PIXI.Graphics()
+    building.beginFill(0x111122)
+    building.drawRect(0, 0, buildingWidth, height)
+    building.endFill()
+
+    building.x = i * (buildingWidth + spacing)
+    building.y = app.screen.height - height
+
+    // Glow sutil no contorno
+    building.filters = [
+      new GlowFilter({
+        distance: 10,
+        outerStrength: 1,
+        innerStrength: 0,
+        color: 0xff00ff,
+        quality: 0.3
+      })
+    ]
+
+    cityLayer.addChild(building)
+    buildings.push(building)
+
+    // Janelas
+    for(let y = 10; y < height - 10; y += 20){
+      for(let x = 10; x < buildingWidth - 10; x += 15){
+
+        if(Math.random() > 0.5){
+          const windowLight = new PIXI.Graphics()
+          windowLight.beginFill(0x00ffff, Math.random())
+          windowLight.drawRect(0,0,6,10)
+          windowLight.endFill()
+
+          windowLight.x = building.x + x
+          windowLight.y = building.y + y
+
+          cityLayer.addChild(windowLight)
+        }
+      }
+    }
+  }
+}
+
+createCity()
 
 // ================= SHIP =================
 const ship = new PIXI.Graphics()
@@ -29,7 +89,6 @@ ship.endFill()
 ship.x = app.screen.width / 2
 ship.y = app.screen.height / 2
 
-// Glow na nave
 ship.filters = [
   new GlowFilter({
     distance: 15,
@@ -50,7 +109,7 @@ window.addEventListener('keyup', (e) => keys[e.key] = false)
 
 const speed = 5
 
-// ================= RAIN (MULTI LAYER) =================
+// ================= RAIN =================
 const rainDrops: PIXI.Graphics[] = []
 
 function createRainLayer(count:number, speedMin:number, speedMax:number, width:number, height:number, alpha:number){
@@ -66,41 +125,23 @@ function createRainLayer(count:number, speedMin:number, speedMax:number, width:n
     drop.y = Math.random() * app.screen.height
     ;(drop as any).speed = Math.random() * (speedMax - speedMin) + speedMin
 
-    // Glow leve na chuva
-    drop.filters = [
-      new GlowFilter({
-        distance: 6,
-        outerStrength: 2,
-        innerStrength: 0,
-        color: 0x00ffff,
-        quality: 0.3
-      })
-    ]
-
     rainLayer.addChild(drop)
     rainDrops.push(drop)
   }
 }
 
-// Longe
 createRainLayer(120, 1, 2, 1, 8, 0.3)
-
-// Médio
 createRainLayer(80, 2, 4, 2, 10, 0.6)
-
-// Próximo
 createRainLayer(50, 4, 7, 2, 14, 0.9)
 
 // ================= GAME LOOP =================
 app.ticker.add((delta) => {
 
-  // Movimento normal (não diagonal)
   if(keys['ArrowUp']) ship.y -= speed
   if(keys['ArrowDown']) ship.y += speed
   if(keys['ArrowLeft']) ship.x -= speed
   if(keys['ArrowRight']) ship.x += speed
 
-  // Atualiza chuva
   rainDrops.forEach(d=>{
     ;(d as any).y += (d as any).speed * delta
 
