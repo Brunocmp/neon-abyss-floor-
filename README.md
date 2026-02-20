@@ -131,7 +131,7 @@ Vercel (optional future)
 
 🚀 Live Demo
 
-🔗 https://neon-abyss-floor.vercel.app
+🔗 https://brunocmp.github.io/neon-abyss-floor/ 
 
 (Update when redeployed)
 
@@ -140,7 +140,7 @@ Vercel (optional future)
 If using the static version:
 
 # Clone repository
-git clone https://github.com/YOUR_USER/neon-abyss-floor.git
+git clone https://github.com/Brunocmp/neon-abyss-floor
 
 cd neon-abyss-floor
 
