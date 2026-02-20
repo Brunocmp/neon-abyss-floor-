@@ -210,7 +210,28 @@ for(let i=0;i<250;i++){
   rainDrops.push(drop);
 }
 
-// ================= GAME LOOP =================
+  // ================= RESIZE SYSTEM =================
+window.addEventListener("resize", onResize);
+
+function onResize(){
+
+  // Atualiza hitArea
+  app.stage.hitArea = app.screen;
+
+  // Reposiciona joystick
+  joystick.position.set(100, app.screen.height - 100);
+
+  // Recalcula escala do skyline
+  const scale = Math.max(
+    app.screen.width / skyline.texture.width,
+    app.screen.height / skyline.texture.height
+  );
+
+  skyline.scale.set(scale);
+  skyline.position.set(app.screen.width/2, app.screen.height/2);
+}
+
+  // ================= GAME LOOP =================
 app.ticker.add(delta=>{
 
   let nx=player.x;
