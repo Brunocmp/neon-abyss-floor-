@@ -33,6 +33,13 @@ document.body.appendChild(app.view);
 const world = new PIXI.Container();
 app.stage.addChild(world);
 
+// FUNDO GRANDE (para não ficar tela preta)
+const bg = new PIXI.Graphics();
+bg.beginFill(0x111111);
+bg.drawRect(-2000,-2000,4000,4000);
+bg.endFill();
+world.addChild(bg);
+
 // ================= PLAYER =================
 const player = new PIXI.Graphics();
 player.beginFill(0x00ffff);
@@ -40,10 +47,11 @@ player.drawCircle(0,0,15);
 player.endFill();
 world.addChild(player);
 
-// posição REAL do jogador no mundo
-let worldX = 1500;
-let worldY = 1500;
-// ================= CAMERA =================
+// posição real do jogador no mundo
+let worldX = 0;
+let worldY = 0;
+
+// ================= CÂMERA SIMPLES =================
 function updateCamera(){
   world.x = app.screen.width/2 - worldX;
   world.y = app.screen.height/2 - worldY;
@@ -65,7 +73,12 @@ stick.drawCircle(0,0,30);
 stick.endFill();
 joystick.addChild(stick);
 
-joystick.position.set(100, app.screen.height - 120);
+function positionJoystick(){
+  joystick.position.set(100, app.screen.height - 120);
+}
+positionJoystick();
+
+window.addEventListener("resize", positionJoystick);
 
 let pointerId = null;
 let moveVector = {x:0,y:0};
@@ -131,7 +144,6 @@ app.ticker.add(delta=>{
 
   const speed = 6;
 
-  // movimento agora altera WORLD POSITION
   worldX += moveVector.x * speed;
   worldY += moveVector.y * speed;
 
@@ -142,7 +154,11 @@ app.ticker.add(delta=>{
 
 });
 
+// inicia câmera corretamente
+updateCamera();
+
 })();
 </script>
+
 </body>
 </html>
