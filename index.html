@@ -22,197 +22,126 @@ canvas{ display:block; }
 <script>
 (async () => {
 
+// ================= APP =================
 const app = new PIXI.Application({
   resizeTo: window,
-  backgroundColor: 0x000000,
-  antialias: true
+  backgroundColor: 0x000000
 });
 document.body.appendChild(app.view);
 
-// ================= PRELOAD =================
-await PIXI.Assets.load([
-  "./assets/station_bg.png",
-  "./assets/ship.png"
-]);
-
-// ================= FUNDO =================
-const skyline = PIXI.Sprite.from("./assets/station_bg.png");
-skyline.anchor.set(0.5);
-skyline.position.set(app.screen.width/2, app.screen.height/2);
-
-const scale = Math.max(
-  app.screen.width / skyline.texture.width,
-  app.screen.height / skyline.texture.height
-);
-skyline.scale.set(scale);
-skyline.alpha = 0.6;
-app.stage.addChild(skyline);
-
-// ================= CAMERA =================
-const camera = new PIXI.Container();
-app.stage.addChild(camera);
-
-const groundLayer = new PIXI.Container();
-const buildingLayer = new PIXI.Container();
-buildingLayer.sortableChildren = true;
-
-camera.addChild(groundLayer);
-camera.addChild(buildingLayer);
-
-// ================= ISO MAP =================
-function cartToIso(x,y){
-  return {
-    x:(x-y)*32,
-    y:(x+y)*16
-  };
-}
-
-const MAP_RADIUS = 6;
-
-for(let x=-MAP_RADIUS;x<=MAP_RADIUS;x++){
-  for(let y=-MAP_RADIUS;y<=MAP_RADIUS;y++){
-
-    if(Math.abs(x)+Math.abs(y)<MAP_RADIUS+2){
-
-      const pos = cartToIso(x,y);
-
-      const tile = new PIXI.Graphics();
-      tile.beginFill(0x0d0022,0.8);
-      tile.drawPolygon([0,0,32,16,0,32,-32,16]);
-      tile.endFill();
-
-      tile.position.set(
-        pos.x + app.screen.width/2,
-        pos.y + 250
-      );
-
-      groundLayer.addChild(tile);
-    }
-  }
-}
+// ================= WORLD =================
+const world = new PIXI.Container();
+app.stage.addChild(world);
 
 // ================= PLAYER =================
-const player = PIXI.Sprite.from("./assets/ship.png");
-player.anchor.set(0.5);
-player.scale.set(0.25);
-player.position.set(app.screen.width/2, 300);
-player.blendMode = PIXI.BLEND_MODES.ADD;
+const player = new PIXI.Graphics();
+player.beginFill(0x00ffff);
+player.drawCircle(0,0,15);
+player.endFill();
+world.addChild(player);
 
-buildingLayer.addChild(player);
+// posição REAL do jogador no mundo
+let worldX = 0;
+let worldY = 0;
 
-// ================= TECLADO =================
-const keys = {};
+// ================= CAMERA =================
+function updateCamera(){
+  world.x = app.screen.width/2 - worldX;
+  world.y = app.screen.height/2 - worldY;
+}
 
-window.addEventListener("keydown", e=>{
-  keys[e.code] = true;
-});
+// ================= JOYSTICK =================
+const joystick = new PIXI.Container();
+app.stage.addChild(joystick);
 
-window.addEventListener("keyup", e=>{
-  keys[e.code] = false;
-});
+const base = new PIXI.Graphics();
+base.beginFill(0x00ffff,0.2);
+base.drawCircle(0,0,60);
+base.endFill();
+joystick.addChild(base);
 
-window.addEventListener("blur", ()=>{
-  for(let k in keys) keys[k] = false;
-});
+const stick = new PIXI.Graphics();
+stick.beginFill(0x00ffff,0.7);
+stick.drawCircle(0,0,30);
+stick.endFill();
+joystick.addChild(stick);
 
-// ================= JOYSTICK VISUAL =================
-const joystickBase = new PIXI.Graphics();
-joystickBase.beginFill(0x00ffff,0.2);
-joystickBase.drawCircle(0,0,60);
-joystickBase.endFill();
-joystickBase.visible = false;
-app.stage.addChild(joystickBase);
+joystick.position.set(100, app.screen.height - 120);
 
-const joystickKnob = new PIXI.Graphics();
-joystickKnob.beginFill(0x00ffff,0.6);
-joystickKnob.drawCircle(0,0,30);
-joystickKnob.endFill();
-joystickKnob.visible = false;
-app.stage.addChild(joystickKnob);
-
-let pointerActive = false;
-let joystickCenter = {x:0,y:0};
+let pointerId = null;
 let moveVector = {x:0,y:0};
 
 app.stage.eventMode = "static";
 app.stage.hitArea = app.screen;
 
 app.stage.on("pointerdown", e=>{
-  pointerActive = true;
-  joystickCenter = e.global;
-
-  joystickBase.position.copyFrom(joystickCenter);
-  joystickKnob.position.copyFrom(joystickCenter);
-
-  joystickBase.visible = true;
-  joystickKnob.visible = true;
+  if(pointerId===null && e.global.x < app.screen.width/2){
+    pointerId = e.pointerId;
+    updateJoystick(e.global);
+  }
 });
 
 app.stage.on("pointermove", e=>{
-  if(!pointerActive) return;
-
-  const dx = e.global.x - joystickCenter.x;
-  const dy = e.global.y - joystickCenter.y;
-  const dist = Math.sqrt(dx*dx + dy*dy);
-  const maxDist = 60;
-
-  let angle = Math.atan2(dy, dx);
-
-  let limitedDist = Math.min(dist, maxDist);
-
-  joystickKnob.x = joystickCenter.x + Math.cos(angle)*limitedDist;
-  joystickKnob.y = joystickCenter.y + Math.sin(angle)*limitedDist;
-
-  moveVector.x = Math.cos(angle) * (limitedDist/maxDist);
-  moveVector.y = Math.sin(angle) * (limitedDist/maxDist);
+  if(e.pointerId===pointerId){
+    updateJoystick(e.global);
+  }
 });
 
-app.stage.on("pointerup", resetJoystick);
-app.stage.on("pointerupoutside", resetJoystick);
+app.stage.on("pointerup", e=>{
+  if(e.pointerId===pointerId) resetJoystick();
+});
+
+app.stage.on("pointerupoutside", e=>{
+  if(e.pointerId===pointerId) resetJoystick();
+});
+
+function updateJoystick(pos){
+
+  const dx = pos.x - joystick.x;
+  const dy = pos.y - joystick.y;
+
+  const maxDist = 60;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+
+  let nx = dx;
+  let ny = dy;
+
+  if(dist > maxDist){
+    const angle = Math.atan2(dy,dx);
+    nx = Math.cos(angle)*maxDist;
+    ny = Math.sin(angle)*maxDist;
+  }
+
+  stick.x = nx;
+  stick.y = ny;
+
+  moveVector.x = nx / maxDist;
+  moveVector.y = ny / maxDist;
+}
 
 function resetJoystick(){
-  pointerActive = false;
+  pointerId = null;
+  stick.x = 0;
+  stick.y = 0;
   moveVector.x = 0;
   moveVector.y = 0;
-  joystickBase.visible = false;
-  joystickKnob.visible = false;
 }
 
 // ================= GAME LOOP =================
 app.ticker.add(delta=>{
 
-  let nx=player.x;
-  let ny=player.y;
+  const speed = 6;
 
-  const speed=6;
+  // movimento agora altera WORLD POSITION
+  worldX += moveVector.x * speed;
+  worldY += moveVector.y * speed;
 
-  // teclado
-  if(keys["ArrowUp"] || keys["KeyW"]) ny -= speed;
-  if(keys["ArrowDown"] || keys["KeyS"]) ny += speed;
-  if(keys["ArrowLeft"] || keys["KeyA"]) nx -= speed;
-  if(keys["ArrowRight"] || keys["KeyD"]) nx += speed;
+  player.x = worldX;
+  player.y = worldY;
 
-  // joystick mobile
-  if(pointerActive){
-    nx += moveVector.x * speed * 1.2;
-    ny += moveVector.y * speed * 1.2;
-  }
-
-  // suavização
-  player.x += (nx - player.x) * 0.35;
-  player.y += (ny - player.y) * 0.35;
-
-  buildingLayer.children.sort((a,b)=>a.y-b.y);
-
-  const targetX=-player.x+app.screen.width/2;
-  const targetY=-player.y+app.screen.height/2;
-
-  camera.x+=(targetX-camera.x)*0.08;
-  camera.y+=(targetY-camera.y)*0.08;
+  updateCamera();
 
 });
-
-console.log("Neon Abyss - Mobile AAA Build 🚀");
 
 })();
 </script>
