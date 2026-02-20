@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>Neon Abyss</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.3/pixi.min.js"></script>
@@ -20,79 +20,202 @@ canvas{ display:block; }
 <body>
 
 <script>
-(async()=>{
 
-// ================= APP =================
+(async () => {
+
+// =====================================================
+// APP
+// =====================================================
 const app = new PIXI.Application({
   resizeTo: window,
-  backgroundColor: 0x000000
+  backgroundColor: 0x000000,
+  antialias: true
 });
 document.body.appendChild(app.view);
 
-// ================= LOAD ASSETS =================
+// =====================================================
+// PRELOAD (CORREÇÃO DO FUNDO)
+// =====================================================
 await PIXI.Assets.load([
   "./assets/station_bg.png",
   "./assets/ship.png"
 ]);
 
-// ================= WORLD =================
-const world = new PIXI.Container();
-app.stage.addChild(world);
+// =====================================================
+// SKYLINE (AGORA SÓ CRIA APÓS CARREGAR)
+// =====================================================
+const skyline = PIXI.Sprite.from("./assets/station_bg.png");
+skyline.anchor.set(0.5);
+skyline.position.set(app.screen.width/2, app.screen.height/2);
 
-// ================= BACKGROUND ESTAÇÃO =================
-const bg = PIXI.Sprite.from("./assets/station_bg.png");
-bg.anchor.set(0.5);
-world.addChild(bg);
+const scale = Math.max(
+  app.screen.width / skyline.texture.width,
+  app.screen.height / skyline.texture.height
+);
+skyline.scale.set(scale);
+skyline.alpha = 0.6;
 
-// ================= PLAYER =================
+app.stage.addChild(skyline);
+
+// =====================================================
+// CAMERA + LAYERS
+// =====================================================
+const camera = new PIXI.Container();
+app.stage.addChild(camera);
+
+const groundLayer = new PIXI.Container();
+const buildingLayer = new PIXI.Container();
+const rainLayer = new PIXI.Container();
+
+buildingLayer.sortableChildren = true;
+
+camera.addChild(groundLayer);
+camera.addChild(buildingLayer);
+app.stage.addChild(rainLayer);
+
+// =====================================================
+// ISO MAP
+// =====================================================
+function cartToIso(x,y){
+  return {
+    x:(x-y)*32,
+    y:(x+y)*16
+  };
+}
+
+const MAP_RADIUS = 6;
+const buildings = [];
+
+for(let x=-MAP_RADIUS;x<=MAP_RADIUS;x++){
+  for(let y=-MAP_RADIUS;y<=MAP_RADIUS;y++){
+
+    if(Math.abs(x)+Math.abs(y)<MAP_RADIUS+2){
+
+      const pos = cartToIso(x,y);
+
+      const tile = new PIXI.Graphics();
+      tile.beginFill(0x0d0022,0.8);
+      tile.drawPolygon([0,0,32,16,0,32,-32,16]);
+      tile.endFill();
+
+      tile.position.set(
+        pos.x + app.screen.width/2,
+        pos.y + 250
+      );
+
+      groundLayer.addChild(tile);
+    }
+  }
+}
+
+// =====================================================
+// PLAYER
+// =====================================================
 const player = PIXI.Sprite.from("./assets/ship.png");
 player.anchor.set(0.5);
 player.scale.set(0.25);
+player.position.set(app.screen.width/2, 300);
 player.blendMode = PIXI.BLEND_MODES.ADD;
-world.addChild(player);
 
-// ================= CHUVA =================
-const rainLayer = new PIXI.Container();
-app.stage.addChild(rainLayer);
+buildingLayer.addChild(player);
 
-const rainDrops = [];
-for(let i=0;i<200;i++){
-  const drop = new PIXI.Graphics();
+// =====================================================
+// INPUT CORRIGIDO
+// =====================================================
+const keys = {};
+
+window.addEventListener("keydown", e=>{
+  keys[e.code] = true;
+});
+
+window.addEventListener("keyup", e=>{
+  keys[e.code] = false;
+});
+
+// 🔥 CORREÇÃO IMPORTANTE
+window.addEventListener("blur", ()=>{
+  for(let k in keys) keys[k] = false;
+});
+
+// Touch usando pointer (mais estável)
+let pointerActive = false;
+let pointerPos = {x:0,y:0};
+
+app.stage.eventMode = "static";
+app.stage.hitArea = app.screen;
+
+app.stage.on("pointerdown", e=>{
+  pointerActive = true;
+  pointerPos = e.global;
+});
+
+app.stage.on("pointermove", e=>{
+  pointerPos = e.global;
+});
+
+app.stage.on("pointerup", ()=> pointerActive = false);
+app.stage.on("pointerupoutside", ()=> pointerActive = false);
+
+// =====================================================
+// CHUVA
+// =====================================================
+const rainDrops=[];
+for(let i=0;i<250;i++){
+  const drop=new PIXI.Graphics();
   drop.beginFill(0x00ffff);
   drop.drawRect(0,0,2,10);
   drop.endFill();
-  drop.x = Math.random()*app.screen.width;
-  drop.y = Math.random()*app.screen.height;
-  drop.speed = Math.random()*4+2;
+  drop.x=Math.random()*app.screen.width;
+  drop.y=Math.random()*app.screen.height;
+  drop.speed=Math.random()*4+2;
   rainLayer.addChild(drop);
   rainDrops.push(drop);
 }
 
-// ================= POSIÇÃO REAL =================
-let worldX = 0;
-let worldY = 0;
+// =====================================================
+// GAME LOOP
+// =====================================================
+app.ticker.add(delta=>{
 
-// ================= CONTROLE SIMPLES (teste) =================
-window.addEventListener("keydown", e=>{
-  if(e.code==="ArrowUp") worldY-=10;
-  if(e.code==="ArrowDown") worldY+=10;
-  if(e.code==="ArrowLeft") worldX-=10;
-  if(e.code==="ArrowRight") worldX+=10;
-});
+  let nx=player.x;
+  let ny=player.y;
+  const speed=5;
 
-// ================= GAME LOOP =================
-app.ticker.add(()=>{
+  // teclado mais estável
+  if(keys["ArrowUp"] || keys["KeyW"]) ny -= speed;
+  if(keys["ArrowDown"] || keys["KeyS"]) ny += speed;
+  if(keys["ArrowLeft"] || keys["KeyA"]) nx -= speed;
+  if(keys["ArrowRight"] || keys["KeyD"]) nx += speed;
 
-  // posiciona player
-  player.position.set(worldX, worldY);
+  // touch estável
+  if(pointerActive){
+    const dx = pointerPos.x - player.x;
+    const dy = pointerPos.y - player.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
 
-  // câmera correta
-  world.pivot.set(worldX, worldY);
-  world.position.set(app.screen.width/2, app.screen.height/2);
+    if(dist > 10){
+      nx += (dx/dist) * speed;
+      ny += (dy/dist) * speed;
+    }
+  }
 
-  // chuva
+  player.x = nx;
+  player.y = ny;
+
+  buildingLayer.children.sort((a,b)=>a.y-b.y);
+
+  // parallax
+  skyline.x = app.screen.width/2 + camera.x*0.05;
+  skyline.y = app.screen.height/2 + camera.y*0.05;
+
+  const targetX=-player.x+app.screen.width/2;
+  const targetY=-player.y+app.screen.height/2;
+
+  camera.x+=(targetX-camera.x)*0.08;
+  camera.y+=(targetY-camera.y)*0.08;
+
   rainDrops.forEach(d=>{
-    d.y+=d.speed;
+    d.y+=d.speed*delta;
     if(d.y>app.screen.height){
       d.y=-20;
       d.x=Math.random()*app.screen.width;
@@ -101,8 +224,9 @@ app.ticker.add(()=>{
 
 });
 
+console.log("Neon Abyss - Stable Build Ready 🚀");
+
 })();
 </script>
-
 </body>
 </html>
