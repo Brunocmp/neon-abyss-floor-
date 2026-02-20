@@ -17,42 +17,38 @@ const app = new PIXI.Application({
 });
 document.body.appendChild(app.view);
 
-// cria mundo
+// WORLD
 const world = new PIXI.Container();
 app.stage.addChild(world);
 
-// fundo gigante
+// FUNDO GRANDE
 const bg = new PIXI.Graphics();
 bg.beginFill(0x222222);
-bg.drawRect(-2000,-2000,4000,4000);
+bg.drawRect(-2000, -2000, 4000, 4000);
 bg.endFill();
 world.addChild(bg);
 
-// player
+// PLAYER
 const player = new PIXI.Graphics();
 player.beginFill(0x00ffff);
-player.drawCircle(0,0,20);
+player.drawCircle(0, 0, 20);
 player.endFill();
 world.addChild(player);
 
-// posição inicial
+// posição real
 let worldX = 0;
 let worldY = 0;
 
-// câmera
-function updateCamera(){
-    world.x = app.screen.width/2 - worldX;
-    world.y = app.screen.height/2 - worldY;
-}
-
-// loop
+// GAME LOOP
 app.ticker.add(()=>{
-    player.x = worldX;
-    player.y = worldY;
-    updateCamera();
-});
 
-updateCamera();
+    player.position.set(worldX, worldY);
+
+    // câmera correta usando pivot
+    world.pivot.set(worldX, worldY);
+    world.position.set(app.screen.width/2, app.screen.height/2);
+
+});
 
 </script>
 
